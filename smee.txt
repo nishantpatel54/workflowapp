@@ -1,0 +1,10 @@
+https://smee.io/HlP4JeWl1MqeiONp
+
+
+npx smee -u https://smee.io/HlP4JeWl1MqeiONp -t http://localhost:3000/api/webhook
+
+
+https://smee.io/ZSCmuYZqwQXHKGQV
+
+
+npx smee -u https://smee.io/ZSCmuYZqwQXHKGQV -t http://localhost:3000/api/webhook
