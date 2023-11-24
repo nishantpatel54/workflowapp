@@ -72,6 +72,53 @@ app.webhooks.onError((error) => {
   }
 })
 
+
+app.webhooks.on(['pull_request_review.edited','pull_request_review.dismissed','pull_request_review.submitted'], async ({ octokit, payload }) => {
+  try {
+    console.log(`Received a pull request review event for #${payload.pull_request.number}`)
+    const {data} = await octokit.rest.actions.listRepoWorkflows({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+    });
+    // loop through array of workflows we got
+    for (var i =0; i<data.workflows.length;i++){
+      //check if disabled manually
+      if(data.workflows[i].state == 'disabled_manually'){
+        // create a comment to make sure they know the workflow was disabled by a user and then enabled by app 
+        await octokit.rest.issues.createComment({
+          owner: payload.repository.owner.login,
+          repo: payload.repository.name,
+          issue_number: payload.pull_request.number,
+          body: 'This Pull Request was closed because a review was submitted while the Approval Check(s) were disabled -> Re-open the PR'
+        });
+        await octokit.rest.pulls.update({
+          owner: payload.repository.owner.login,
+          repo: payload.repository.name,
+          pull_number: payload.pull_request.number,
+          state: 'closed'
+        });
+        break;
+      }
+    }
+  } catch (error) {
+    if (error.response) {
+      console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
+    } else {
+      console.error(error)
+    }
+  }
+})
+
+app.webhooks.onError((error) => {
+  if (error.name === 'AggregateError') {
+    console.log(`Error processing request: ${error.event}`)
+  } else {
+    console.log(error)
+  }
+})
+
+
+
 const port = process.env.PORT || 3000
 const path = '/api/webhook'
 const localWebhookUrl = `http://127.0.0.1:${port}${path}`
