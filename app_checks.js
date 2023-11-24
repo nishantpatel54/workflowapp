@@ -11,7 +11,20 @@ const appId = process.env.APP_ID
 const privateKeyPath = process.env.PRIVATE_KEY_PATH
 const privateKey = fs.readFileSync(privateKeyPath, 'utf8')
 const secret = process.env.WEBHOOK_SECRET
-const enterpriseHostname = process.env.ENTERPRISE_HOSTNAME
+
+//jira starter variables for api call
+const jira_api_token = null //process.env.JIRA_API_TOKEN
+const jira_email = null //process.env.JIRA_EMAIL
+const jira_server =  "https://ceridian.atlassian.net"
+const jira_api_url = jira_server.concat("/rest/api/2/issue/$issueKey")
+const basic_auth = "Basic "+ btoa(jira_email+':'+jira_api_token);
+//make a call to jira api using basic auth with the email and api token, to the url 
+//that we create using the url variables concated with the issue key ** replace with one in PR and commits
+// headers for request 
+const headers = {
+  'Authorization' : basic_auth,
+  'Content-Type' : 'application/json'
+}
 
 const app = new App({
   appId,
@@ -56,6 +69,26 @@ app.webhooks.on(['pull_request.opened','pull_request.reopened','pull_request.rea
       }
     }
   } catch (error) {
+    if (error.response) {
+      console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
+    } else {
+      console.error(error)
+    }
+  }
+})
+
+app.webhooks.on(['pull_request.opened','pull_request.synchronize','pull_request.edited','pull_request.reopened','pull_request.ready_for_review'], async ({ octokit, payload }) => {
+  console.log(`Received a pull request event for #${payload.pull_request.number}`)
+  try{
+
+    // commit validation
+    const {commits} = await octokit.rest.pulls.listCommits({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      pull_number: payload.pull_request.number
+    });
+
+  }catch(error){
     if (error.response) {
       console.error(`Error! Status: ${error.response.status}. Message: ${error.response.data.message}`)
     } else {
